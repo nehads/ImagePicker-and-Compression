@@ -5,13 +5,14 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.os.Environment
-import android.os.Parcelable
 import android.provider.MediaStore
-import android.util.Log
+import android.provider.Settings
 import android.view.View
 import android.widget.Toast
+import androidx.core.app.ActivityCompat
 import androidx.core.content.FileProvider
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
@@ -20,9 +21,12 @@ import com.shashankpednekar.imagepickercompression.ParentActivity
 import com.shashankpednekar.imagepickercompression.R
 import com.shashankpednekar.imagepickercompression.utils.compressImageFile
 import kotlinx.android.synthetic.main.activity_main.*
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import java.io.File
-import java.util.ArrayList
+import java.util.*
 
 private const val REQ_CAPTURE = 100
 private const val RES_IMAGE = 100
@@ -33,13 +37,22 @@ class MainActivity : ParentActivity(R.layout.activity_main) {
     private var imgPath: String = ""
     private var imageUri: Uri? = null
     private val permissions = arrayOf(Manifest.permission.CAMERA)
+    private var pickerConst = -1
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        btn_capture.setOnClickListener {
+        camera_btn_camera.setOnClickListener {
+            pickerConst = 0
             if (isPermissionsAllowed(permissions, true, REQ_CAPTURE)) {
-                chooseImage()
+                chooseCamera()
+            }
+        }
+
+        gallery_btn_camera.setOnClickListener {
+            pickerConst = 1
+            if (isPermissionsAllowed(permissions, true, REQ_CAPTURE)) {
+                chooseGallery()
             }
         }
     }
@@ -53,11 +66,16 @@ class MainActivity : ParentActivity(R.layout.activity_main) {
         when (requestCode) {
             REQ_CAPTURE -> {
                 if (isAllPermissionsGranted(grantResults)) {
-                    chooseImage()
+                    if (pickerConst == 1) {
+                        chooseGallery()
+                    } else {
+                        chooseCamera()
+                    }
                 } else {
+                    openSetting()
                     Toast.makeText(
                         this,
-                        getString(R.string.permission_not_granted),
+                        getString(R.string.storage_not_granted),
                         Toast.LENGTH_SHORT
                     ).show()
                 }
@@ -76,8 +94,12 @@ class MainActivity : ParentActivity(R.layout.activity_main) {
         }
     }
 
-    private fun chooseImage() {
+    private fun chooseCamera() {
         startActivityForResult(getPickImageIntent(), RES_IMAGE)
+    }
+
+    private fun chooseGallery() {
+        startActivityForResult(getPickGalleryIntent(), RES_IMAGE)
     }
 
     private fun getPickImageIntent(): Intent? {
@@ -85,22 +107,34 @@ class MainActivity : ParentActivity(R.layout.activity_main) {
 
         var intentList: MutableList<Intent> = ArrayList()
 
-        val pickIntent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
-
         val takePhotoIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
         takePhotoIntent.putExtra(MediaStore.EXTRA_OUTPUT, setImageUri())
 
-        intentList = addIntentsToList(this, intentList, pickIntent)
         intentList = addIntentsToList(this, intentList, takePhotoIntent)
 
         if (intentList.size > 0) {
             chooserIntent = Intent.createChooser(
                 intentList.removeAt(intentList.size - 1),
-                getString(R.string.select_capture_image)
+                ""
             )
-            chooserIntent!!.putExtra(
-                Intent.EXTRA_INITIAL_INTENTS,
-                intentList.toTypedArray<Parcelable>()
+        }
+
+        return chooserIntent
+    }
+
+    private fun getPickGalleryIntent(): Intent? {
+        var chooserIntent: Intent? = null
+
+        var intentList: MutableList<Intent> = ArrayList()
+
+        val pickIntent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
+
+        intentList = addIntentsToList(this, intentList, pickIntent)
+
+        if (intentList.size > 0) {
+            chooserIntent = Intent.createChooser(
+                intentList.removeAt(intentList.size - 1),
+                ""
             )
         }
 
@@ -130,13 +164,17 @@ class MainActivity : ParentActivity(R.layout.activity_main) {
         list: MutableList<Intent>,
         intent: Intent
     ): MutableList<Intent> {
-        val resInfo = context.packageManager.queryIntentActivities(intent, 0)
-        for (resolveInfo in resInfo) {
-            val packageName = resolveInfo.activityInfo.packageName
-            val targetedIntent = Intent(intent)
-            targetedIntent.setPackage(packageName)
-            list.add(targetedIntent)
-        }
+        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.Q) {
+            val resInfo = context.packageManager.queryIntentActivities(intent, 0)
+            for (resolveInfo in resInfo) {
+                val packageName = resolveInfo.activityInfo.packageName
+                val targetedIntent = Intent(intent)
+                targetedIntent.setPackage(packageName)
+                list.add(targetedIntent)
+            }
+
+        } else
+            list.add(intent)
         return list
     }
 
@@ -178,4 +216,32 @@ class MainActivity : ParentActivity(R.layout.activity_main) {
 
     }
 
+     fun openSetting() {
+        if (!ActivityCompat.shouldShowRequestPermissionRationale(this,
+                Manifest.permission.CAMERA)) {
+            showSettingRequestDialog()
+        }
+    }
+
+    private fun showSettingRequestDialog() {
+
+        val dialogBuilder = androidx.appcompat.app.AlertDialog.Builder(this)
+        dialogBuilder.setTitle(getString(R.string.request_permission))
+        dialogBuilder.setMessage(getString(R.string.storage_permission_access))
+        dialogBuilder.setPositiveButton(getString(R.string.open_settings)) { _, _ ->
+
+            openAppSystemSettings()
+        }
+        dialogBuilder.setNegativeButton(getString(R.string.deny)) { _, _ ->
+            //require permission toast
+        }
+        dialogBuilder.show()
+    }
+
+    private fun openAppSystemSettings() {
+        startActivity(Intent().apply {
+            action = Settings.ACTION_APPLICATION_DETAILS_SETTINGS
+            data = Uri.fromParts("package", packageName, null)
+        })
+    }
 }

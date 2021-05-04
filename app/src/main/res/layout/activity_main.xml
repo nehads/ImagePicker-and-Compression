@@ -11,8 +11,46 @@
         android:id="@+id/iv_img"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        app:layout_constraintBottom_toTopOf="@id/btn_capture"
+        app:layout_constraintBottom_toTopOf="@id/constGrp"
         app:layout_constraintTop_toTopOf="parent" />
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/constGrp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@drawable/camera_popup_shape"
+        android:padding="18dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent">
+
+        <TextView
+            android:id="@+id/camera_btn_camera"
+            style="@style/CameraOption"
+            android:layout_width="wrap_content"
+            android:background="?android:attr/selectableItemBackground"
+            android:drawableStart="@drawable/ic_camera"
+            android:gravity="start|center_vertical"
+            android:maxLines="1"
+            android:text="@string/camera"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <TextView
+            android:id="@+id/gallery_btn_camera"
+            style="@style/CameraOption"
+            android:layout_width="wrap_content"
+            android:background="?android:attr/selectableItemBackground"
+            android:drawableStart="@drawable/ic_photo"
+            android:drawablePadding="8dp"
+            android:gravity="end|center_vertical"
+            android:text="@string/gallery"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@id/camera_btn_camera"
+            app:layout_constraintTop_toTopOf="parent" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
 
     <androidx.core.widget.ContentLoadingProgressBar
         android:id="@+id/progressBar"
@@ -20,20 +58,10 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:visibility="gone"
-        app:layout_constraintBottom_toBottomOf="@+id/btn_capture"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         tools:visibility="visible" />
-
-    <Button
-        android:id="@+id/btn_capture"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="10dp"
-        android:text="Capture/Gallery"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintRight_toRightOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
